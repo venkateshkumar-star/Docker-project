@@ -1,0 +1,130 @@
+pipeline {
+
+    agent any
+
+    environment {
+        IMAGE_NAME = "myapp"
+        IMAGE_TAG = "${BUILD_NUMBER}"
+
+        AWS_REGION = "ap-south-1"
+        AWS_ACCOUNT_ID = "869096797771"
+        ECR_REPOSITORY = "myapp"
+        ECR_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}"
+    }
+
+    stages {
+
+        stage('Checkout') {
+            steps {
+                git branch: 'master',
+                    credentialsId: 'github-token',
+                    url: 'https://github.com/venkateshkumar-star/Docker-project.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
+                docker images
+                '''
+            }
+        }
+
+        stage('Trivy Scan') {
+            steps {
+                sh '''
+                trivy image --skip-version-check --exit-code 0 ${IMAGE_NAME}:${IMAGE_TAG}
+                '''
+            }
+        }
+
+        stage('AWS Login') {
+            steps {
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-credentials']
+                ]) {
+
+                    sh '''
+                    aws sts get-caller-identity
+
+                    aws ecr get-login-password --region ${AWS_REGION} | docker login \
+                    --username AWS \
+                    --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                    '''
+                }
+            }
+        }
+
+        stage('Create ECR Repository') {
+            steps {
+                withCredentials([
+                    [$class: 'AmazonWebServicesCredentialsBinding',
+                    credentialsId: 'aws-credentials']
+                ]) {
+
+                    sh '''
+                    aws ecr describe-repositories \
+                    --repository-names ${ECR_REPOSITORY} \
+                    --region ${AWS_REGION} || \
+                    aws ecr create-repository \
+                    --repository-name ${ECR_REPOSITORY} \
+                    --region ${AWS_REGION}
+                    '''
+                }
+            }
+        }
+
+        stage('Tag Image') {
+            steps {
+                sh '''
+                docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ECR_URI}:${IMAGE_TAG}
+                docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ECR_URI}:latest
+                '''
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                sh '''
+                docker push ${ECR_URI}:${IMAGE_TAG}
+                docker push ${ECR_URI}:latest
+                '''
+            }
+        }
+
+        stage('Deploy') {
+            steps {
+                sh '''
+                docker stop myapp || true
+                docker rm myapp || true
+
+                docker pull ${ECR_URI}:latest
+
+                docker run -d \
+                  --name myapp \
+                  -p 5000:5000 \
+                  --restart always \
+                  ${ECR_URI}:latest
+
+                docker ps
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            sh 'docker images'
+        }
+
+        success {
+            echo 'Pipeline Completed Successfully'
+        }
+
+        failure {
+            echo 'Pipeline Failed'
+        }
+    }
+}
