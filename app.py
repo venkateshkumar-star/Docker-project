@@ -1,6 +1,11 @@
 from flask import Flask, render_template_string
+import os
 
 app = Flask(__name__)
+
+# Version comes from Jenkins/Docker.
+# If not provided, it defaults to V1.00.
+VERSION = os.getenv("APP_VERSION", "V1.00")
 
 HTML = """
 <!DOCTYPE html>
@@ -24,7 +29,7 @@ body{
     display:flex;
     justify-content:center;
     align-items:center;
-    background: linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1c92d2);
+    background:linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1c92d2);
     background-size:400% 400%;
     animation:gradient 12s ease infinite;
     overflow:hidden;
@@ -80,6 +85,22 @@ p{
     color:#f4f4f4;
 }
 
+/* Version Badge */
+.version{
+    position:fixed;
+    bottom:20px;
+    right:20px;
+    background:rgba(255,255,255,0.12);
+    backdrop-filter:blur(10px);
+    color:white;
+    padding:8px 14px;
+    border-radius:10px;
+    font-size:14px;
+    font-weight:bold;
+    letter-spacing:1px;
+    box-shadow:0px 4px 12px rgba(0,0,0,0.3);
+}
+
 </style>
 
 </head>
@@ -103,14 +124,17 @@ p{
 
 </div>
 
-</body>
+<div class="version">
+    {{ version }}
+</div>
 
+</body>
 </html>
 """
 
 @app.route("/")
 def home():
-    return render_template_string(HTML)
+    return render_template_string(HTML, version=VERSION)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
