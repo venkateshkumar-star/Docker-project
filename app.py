@@ -1,144 +1,116 @@
-pipeline {
+from flask import Flask, render_template_string
 
-    agent any
+app = Flask(__name__)
 
-    environment {
-        IMAGE_NAME = "myapp"
-        IMAGE_TAG = "${BUILD_NUMBER}"
+HTML = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>6F IT</title>
 
-        AWS_REGION = "ap-south-1"
-        AWS_ACCOUNT_ID = "869096797771"
-        ECR_REPOSITORY = "myapp"
-        ECR_URI = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPOSITORY}"
-    }
+<style>
 
-    stages {
-
-        stage('Set Version') {
-            steps {
-                script {
-                    env.APP_VERSION = String.format("V1.%02d", env.BUILD_NUMBER.toInteger())
-                    echo "Application Version: ${env.APP_VERSION}"
-                }
-            }
-        }
-
-        stage('Checkout') {
-            steps {
-                git branch: 'master',
-                    credentialsId: 'github-token',
-                    url: 'https://github.com/venkateshkumar-star/Docker-project.git'
-            }
-        }
-
-        stage('Build Docker Image') {
-            steps {
-                sh """
-                docker build \
-                  --build-arg APP_VERSION=${APP_VERSION} \
-                  -t ${IMAGE_NAME}:${IMAGE_TAG} .
-
-                docker images
-                """
-            }
-        }
-
-        stage('Trivy Scan') {
-            steps {
-                sh """
-                trivy image --skip-version-check --exit-code 0 ${IMAGE_NAME}:${IMAGE_TAG}
-                """
-            }
-        }
-
-        stage('AWS Login') {
-            steps {
-                withCredentials([
-                    [$class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials']
-                ]) {
-
-                    sh """
-                    aws sts get-caller-identity
-
-                    aws ecr get-login-password --region ${AWS_REGION} | docker login \
-                    --username AWS \
-                    --password-stdin ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
-                    """
-                }
-            }
-        }
-
-        stage('Create ECR Repository') {
-            steps {
-                withCredentials([
-                    [$class: 'AmazonWebServicesCredentialsBinding',
-                    credentialsId: 'aws-credentials']
-                ]) {
-
-                    sh """
-                    aws ecr describe-repositories \
-                    --repository-names ${ECR_REPOSITORY} \
-                    --region ${AWS_REGION} || \
-                    aws ecr create-repository \
-                    --repository-name ${ECR_REPOSITORY} \
-                    --region ${AWS_REGION}
-                    """
-                }
-            }
-        }
-
-        stage('Tag Image') {
-            steps {
-                sh """
-                docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ECR_URI}:${IMAGE_TAG}
-                docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${ECR_URI}:latest
-                """
-            }
-        }
-
-        stage('Push Image') {
-            steps {
-                sh """
-                docker push ${ECR_URI}:${IMAGE_TAG}
-                docker push ${ECR_URI}:latest
-                """
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                sh """
-                docker stop myapp || true
-                docker rm myapp || true
-
-                docker pull ${ECR_URI}:latest
-
-                docker run -d \
-                    --name myapp \
-                    -p 5000:5000 \
-                    --restart always \
-                    -e APP_VERSION=${APP_VERSION} \
-                    ${ECR_URI}:latest
-
-                docker ps
-                """
-            }
-        }
-    }
-
-    post {
-        always {
-            sh 'docker images'
-        }
-
-        success {
-            echo "Pipeline Completed Successfully"
-            echo "Application Version: ${APP_VERSION}"
-        }
-
-        failure {
-            echo 'Pipeline Failed'
-        }
-    }
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial, Helvetica, sans-serif;
 }
+
+body{
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background: linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1c92d2);
+    background-size:400% 400%;
+    animation:gradient 12s ease infinite;
+    overflow:hidden;
+}
+
+@keyframes gradient{
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
+}
+
+.container{
+    width:700px;
+    text-align:center;
+    background:rgba(255,255,255,0.12);
+    backdrop-filter:blur(12px);
+    border-radius:20px;
+    padding:60px;
+    color:white;
+    box-shadow:0px 15px 40px rgba(0,0,0,0.35);
+}
+
+.logo{
+    width:120px;
+    height:120px;
+    margin:auto;
+    border-radius:50%;
+    background:white;
+    color:#1c92d2;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:48px;
+    font-weight:bold;
+    margin-bottom:30px;
+}
+
+h1{
+    font-size:48px;
+    letter-spacing:2px;
+    margin-bottom:20px;
+}
+
+h2{
+    font-size:28px;
+    color:#FFD54F;
+    margin-bottom:20px;
+}
+
+p{
+    font-size:20px;
+    line-height:35px;
+    color:#f4f4f4;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <div class="logo">
+        6F
+    </div>
+
+    <h1>WELCOME TO 6F IT</h1>
+
+    <h2>Every Person Deserves a Great Career</h2>
+
+    <p>
+        Build Your Future.<br>
+        Learn • Practice • Grow • Succeed
+    </p>
+
+</div>
+
+</body>
+
+</html>
+"""
+
+@app.route("/")
+def home():
+    return render_template_string(HTML)
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
