@@ -20,115 +20,64 @@ HTML = """
 }
 
 body{
-
     height:100vh;
-
     display:flex;
     justify-content:center;
     align-items:center;
-
     background: linear-gradient(-45deg,#0f2027,#203a43,#2c5364,#1c92d2);
     background-size:400% 400%;
-
     animation:gradient 12s ease infinite;
-
     overflow:hidden;
-
 }
 
 @keyframes gradient{
-
-0%{background-position:0% 50%;}
-50%{background-position:100% 50%;}
-100%{background-position:0% 50%;}
-
+    0%{background-position:0% 50%;}
+    50%{background-position:100% 50%;}
+    100%{background-position:0% 50%;}
 }
 
 .container{
-
     width:700px;
-
     text-align:center;
-
     background:rgba(255,255,255,0.12);
-
     backdrop-filter:blur(12px);
-
     border-radius:20px;
-
     padding:60px;
-
     color:white;
-
     box-shadow:0px 15px 40px rgba(0,0,0,0.35);
-
 }
 
 .logo{
-
     width:120px;
     height:120px;
-
     margin:auto;
-
     border-radius:50%;
-
     background:white;
-
     color:#1c92d2;
-
     display:flex;
-
     justify-content:center;
-
     align-items:center;
-
     font-size:48px;
-
     font-weight:bold;
-
     margin-bottom:30px;
-
 }
 
 h1{
-
     font-size:48px;
-
     letter-spacing:2px;
-
     margin-bottom:20px;
-
 }
 
 h2{
-
     font-size:28px;
-
     color:#FFD54F;
-
     margin-bottom:20px;
-
 }
 
 p{
-
     font-size:20px;
-
     line-height:35px;
-
     color:#f4f4f4;
-
-}
-
-.footer{
-
-    margin-top:40px;
-
-    font-size:16px;
-
-    color:#dddddd;
-
 }
 
 </style>
@@ -139,29 +88,24 @@ p{
 
 <div class="container">
 
-<div class="logo">
-6F
-</div>
+    <div class="logo">
+        6F
+    </div>
 
-<h1>WELCOME TO 6F IT</h1>
+    <h1>WELCOME TO 6F IT</h1>
 
-<h2>Every Person Deserves a Great Career</h2>
+    <h2>Every Person Deserves a Great Career</h2>
 
-<p>
-Build Your Future.<br>
-Learn • Practice • Grow • Succeed
-</p>
-
-<div class="footer">
-Powered by Docker | Jenkins | AWS | DevOps
-</div>
+    <p>
+        Build Your Future.<br>
+        Learn • Practice • Grow • Succeed
+    </p>
 
 </div>
 
 </body>
 
 </html>
-
 """
 
 @app.route("/")
